@@ -3,7 +3,7 @@
  * Litecoin classes
  *
  * By Mark Mikkelson - All rights reversed http://www.unlicense.org/ (public domain)
- * This is based largely on Mike Gogulski's Bitcoin library https://github.com/mikegogulski/litecoin-php
+ * This is based largely on Mike Gogulski's Bitcoin library https://github.com/mikegogulski/bitcoin-php  (nearly entirely)
  * If you use this library and it helps you and would like to show your appreciation/support
  * You can donate Litecoins to address LPfr9bqMZ8j4Gu9HfT6cHdiiVxbvuonPdf   
  * They would be greatly appreciated. Thanks!
@@ -18,23 +18,241 @@
 
 /**
  * Litecoin utility functions class
- *
  * @author Mark Mikkelson
- * 	http://www.madcapsule.com/ 
+ * Based on Mike Gogulski's Bitcoin Exception class
+ *  http://www.madcapsule.com/ 
  *
  */
 
-class Litecoin {
-  
+
+define("LITECOIN_ADDRESS_VERSION", "30");// this is a hex byte
 /**
  * Exception class for LitecoinClient
  *
  * @author Mark Mikkelson
  * Based on Mike Gogulski's Bitcoin Exception class
- * 	http://www.madcapsule.com/
+ *  http://www.madcapsule.com/
+ */
+class Litecoin {
+
+/**
+ * Litecoin client class for JSON-RPC-HTTP[S] calls
+ *
+ *
+ * @version 0.0.1
+ * @author Mark Mikkelson
+ * http://www.madcapsule.com 
+ */
+
+  private static $hexchars = "0123456789ABCDEF";
+  private static $base58chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+  /**
+   * Convert a hex string into a (big) integer
+   *
+   * @param string $hex
+   * @return int
+   * @access private
+   */
+  private function decodeHex($hex) {
+    $hex = strtoupper($hex);
+    $return = "0";
+    for ($i = 0; $i < strlen($hex); $i++) {
+      $current = (string) strpos(self::$hexchars, $hex[$i]);
+      $return = (string) bcmul($return, "16", 0);
+      $return = (string) bcadd($return, $current, 0);
+    }
+    return $return;
+  }
+
+  /**
+   * Convert an integer into a hex string
+   *
+   * @param int $dec
+   * @return string
+   * @access private
+   */
+  private function encodeHex($dec) {
+    $return = "";
+    while (bccomp($dec, 0) == 1) {
+      $dv = (string) bcdiv($dec, "16", 0);
+      $rem = (integer) bcmod($dec, "16");
+      $dec = $dv;
+      $return = $return . self::$hexchars[$rem];
+    }
+    return strrev($return);
+  }
+
+  /**
+   * Convert a Base58-encoded integer into the equivalent hex string representation
+   *
+   * @param string $base58
+   * @return string
+   * @access private
+   */
+  private function decodeBase58($base58) {
+    $origbase58 = $base58;
+
+    //only valid chars allowed
+    if (preg_match('/[^1-9A-HJ-NP-Za-km-z]/', $base58)) {
+      return "";
+    }
+
+    $return = "0";
+    for ($i = 0; $i < strlen($base58); $i++) {
+      $current = (string) strpos(Litecoin::$base58chars, $base58[$i]);
+      $return = (string) bcmul($return, "58", 0);
+      $return = (string) bcadd($return, $current, 0);
+    }
+
+    $return = self::encodeHex($return);
+
+    //leading zeros
+    for ($i = 0; $i < strlen($origbase58) && $origbase58[$i] == "1"; $i++) {
+      $return = "00" . $return;
+    }
+
+    if (strlen($return) % 2 != 0) {
+      $return = "0" . $return;
+    }
+
+    return $return;
+  }
+
+  /**
+   * Convert a hex string representation of an integer into the equivalent Base58 representation
+   *
+   * @param string $hex
+   * @return string
+   * @access private
+   */
+  private function encodeBase58($hex) {
+    if (strlen($hex) % 2 != 0) {
+      die("encodeBase58: uneven number of hex characters");
+    }
+    $orighex = $hex;
+
+    $hex = self::decodeHex($hex);
+    $return = "";
+    while (bccomp($hex, 0) == 1) {
+      $dv = (string) bcdiv($hex, "58", 0);
+      $rem = (integer) bcmod($hex, "58");
+      $hex = $dv;
+      $return = $return . self::$base58chars[$rem];
+    }
+    $return = strrev($return);
+
+    //leading zeros
+    for ($i = 0; $i < strlen($orighex) && substr($orighex, $i, 2) == "00"; $i += 2) {
+      $return = "1" . $return;
+    }
+
+    return $return;
+  }
+
+  /**
+   * Convert a 160-bit Litecoin hash to a Litecoin address
+   *
+   * @author theymos
+   * @param string $hash160
+   * @param string $addressversion
+   * @return string Litecoin address
+   * @access public
+   */
+  public static function hash160ToAddress($hash160, $addressversion = LITECOIN_ADDRESS_VERSION) {
+    $hash160 = $addressversion . $hash160;
+    $check = pack("H*", $hash160);
+    $check = hash("sha256", hash("sha256", $check, true));
+    $check = substr($check, 0, 8);
+    $hash160 = strtoupper($hash160 . $check);
+    return self::encodeBase58($hash160);
+  }
+
+  /**
+   * Convert a Litecoin address to a 160-bit Litecoin hash
+   *
+   * @author theymos
+   * @param string $addr
+   * @return string Litecoin hash
+   * @access public
+   */
+  public static function addressToHash160($addr) {
+    $addr = self::decodeBase58($addr);
+    $addr = substr($addr, 2, strlen($addr) - 10);
+    return $addr;
+  }
+
+  /**
+   * Determine if a string is a valid Litecoin address
+   *
+   * @author theymos
+   * @param string $addr String to test
+   * @param string $addressversion
+   * @return boolean
+   * @access public
+   */
+  public static function checkAddress($addr, $addressversion = LITECOIN_ADDRESS_VERSION) {
+    $addr = self::decodeBase58($addr);
+    if (strlen($addr) != 50) {
+      return false;
+    }
+    $version = substr($addr, 0, 2);
+    if (hexdec($version) > hexdec($addressversion)) {
+      return false;
+    }
+    $check = substr($addr, 0, strlen($addr) - 8);
+    $check = pack("H*", $check);
+    $check = strtoupper(hash("sha256", hash("sha256", $check, true)));
+    $check = substr($check, 0, 8);
+    return $check == substr($addr, strlen($addr) - 8);
+  }
+
+  /**
+   * Convert the input to its 160-bit Litecoin hash
+   *
+   * @param string $data
+   * @return string
+   * @access private
+   */
+  private function hash160($data) {
+    $data = pack("H*", $data);
+    return strtoupper(hash("ripemd160", hash("sha256", $data, true)));
+  }
+
+  /**
+   * Convert a Litecoin public key to a 160-bit Litecoin hash
+   *
+   * @param string $pubkey
+   * @return string
+   * @access public
+   */
+  public static function pubKeyToAddress($pubkey) {
+    return self::hash160ToAddress($this->hash160($pubkey));
+  }
+
+  /**
+   * Remove leading "0x" from a hex value if present.
+   *
+   * @param string $string
+   * @return string
+   * @access public
+   */
+  public static function remove0x($string) {
+    if (substr($string, 0, 2) == "0x" || substr($string, 0, 2) == "0X") {
+      $string = substr($string, 2);
+    }
+    return $string;
+  }
+}
+
+/**
+ * Exception class for LitecoinClient
+ * @author Mark Mikkelson
+ * Based on Mike Gogulski's Bitcoin Exception class
+ * http://www.madcapsule.com/ 
  */
 class LitecoinClientException extends ErrorException {
-  // Exception optional
+  // Exception message optional
   public function __construct($message, $code = 0, $severity = E_USER_NOTICE, Exception $previous = null) {
     parent::__construct($message, $code, $severity, $previous);
   }
@@ -48,12 +266,14 @@ require_once(dirname(__FILE__) . "/includes/xmlrpc.inc");
 require_once(dirname(__FILE__) . "/includes/jsonrpc.inc");
 
 /**
- * Litecoin client class for JSON-RPC-HTTP[S] calls
+ * Litecoin client class for access to a Litecoin server via JSON-RPC-HTTP[S]
  *
-  *
- * @version 0.0.1
+ * Implements the methods documented at https://www.litecoin.org/wiki/doku.php?id=api
+ *
+ * @version 0.1.0
  * @author Mark Mikkelson
- * http://www.madcapsule.com 
+ * Based on Mike Gogulski's Bitcoin Client class
+ * http://www.madcapsule.com/ 
  */
 class LitecoinClient extends jsonrpc_client {
 
@@ -62,21 +282,21 @@ class LitecoinClient extends jsonrpc_client {
    * or false on failure.
    *
    * @param string $scheme
-   * 	"http" or "https"
+   *  "http" or "https"
    * @param string $username
-   * 	User name to use in connection the Litecoin server's JSON-RPC interface
+   *  User name to use in connection the Litecoin server's JSON-RPC interface
    * @param string $password
-   * 	Server password
+   *  Server password
    * @param string $address
-   * 	Server hostname or IP address
+   *  Server hostname or IP address
    * @param mixed $port
-   * 	Server port (string or integer)
+   *  Server port (string or integer)
    * @param string $certificate_path
-   * 	Path on the local filesystem to server's PEM certificate (ignored if $scheme != "https")
+   *  Path on the local filesystem to server's PEM certificate (ignored if $scheme != "https")
    * @param integer $debug_level
-   * 	0 (default) = no debugging;
-   * 	1 = echo JSON-RPC messages received to stdout;
-   * 	2 = log transmitted messages also
+   *  0 (default) = no debugging;
+   *  1 = echo JSON-RPC messages received to stdout;
+   *  2 = log transmitted messages also
    * @return jsonrpc_client
    * @access public
    * @throws LitecoinClientException
@@ -183,8 +403,7 @@ class LitecoinClient extends jsonrpc_client {
   }
 
   /*
-   * The following functions implement the Litecoin RPC API
-   * IMPORTANT: Not all functions are currently implemented
+   * The following functions implement the Litecoin RPC API as documented at https://www.litecoin.org/wiki/doku.php?id=api
    */
 
   /**
@@ -261,7 +480,7 @@ class LitecoinClient extends jsonrpc_client {
   }
 
   /**
-   * Returns boolean true if server is trying to generate litecoin, false otherwise.
+   * Returns boolean true if server is trying to generate bitcoins, false otherwise.
    *
    * @return boolean Generation status
    * @throws LitecoinClientException
@@ -271,12 +490,12 @@ class LitecoinClient extends jsonrpc_client {
   }
 
   /**
-   * Tell Litecoin server to generate Litecoins or not, and how many processors
+   * Tell Litecoin server to generate Bitcoins or not, and how many processors
    * to use.
    *
    * @param boolean $generate
    * @param integer $maxproc
-   * 	Limit generation to $maxproc processors, unlimited if -1
+   *  Limit generation to $maxproc processors, unlimited if -1
    * @return mixed Nothing if successful, error array if not
    * @throws LitecoinClientException
    */
@@ -377,9 +596,9 @@ class LitecoinClient extends jsonrpc_client {
    * $minconf confirmations.
    *
    * @param string $address
-   * 	Litecoin address
+   *  Litecoin address
    * @param integer $minconf
-   * 	Minimum number of confirmations for transactions to be counted
+   *  Minimum number of confirmations for transactions to be counted
    * @return float Litecoin total
    * @throws LitecoinClientException
    */
@@ -397,7 +616,7 @@ class LitecoinClient extends jsonrpc_client {
    *
    * @param string $account
    * @param integer $minconf
-   * 	Minimum number of confirmations for transactions to be counted
+   *  Minimum number of confirmations for transactions to be counted
    * @return float Litecoin total
    * @throws LitecoinClientException
    * @since 0.3.17
@@ -416,7 +635,7 @@ class LitecoinClient extends jsonrpc_client {
    *
    * @param string $label
    * @param integer $minconf
-   * 	Minimum number of confirmations for transactions to be counted
+   *  Minimum number of confirmations for transactions to be counted
    * @return float Litecoin total
    * @throws LitecoinClientException
    * @deprecated Since 0.3.17
@@ -443,16 +662,16 @@ class LitecoinClient extends jsonrpc_client {
   }
 
   /**
-   * Return an array of arrays showing how many Litecoins have been received by
+   * Return an array of arrays showing how many Bitcoins have been received by
    * each address in the server's wallet.
    *
    * @param integer $minconf Minimum number of confirmations before payments are included.
    * @param boolean $includeempty Whether to include addresses that haven't received any payments.
    * @return array An array of arrays. The elements are:
-   * 	"address" => receiving address
-   * 	"account" => the account of the receiving address
-   * 	"amount" => total amount received by the address
-   * 	"confirmations" => number of confirmations of the most recent transaction included
+   *  "address" => receiving address
+   *  "account" => the account of the receiving address
+   *  "amount" => total amount received by the address
+   *  "confirmations" => number of confirmations of the most recent transaction included
    * @throws LitecoinClientException
    */
   public function listreceivedbyaddress($minconf = 1, $includeempty = FALSE) {
@@ -462,17 +681,17 @@ class LitecoinClient extends jsonrpc_client {
   }
 
   /**
-   * Return an array of arrays showing how many Litecoins have been received by
+   * Return an array of arrays showing how many Bitcoins have been received by
    * each account in the server's wallet.
    *
    * @param integer $minconf
-   * 	Minimum number of confirmations before payments are included.
+   *  Minimum number of confirmations before payments are included.
    * @param boolean $includeempty
-   * 	Whether to include addresses that haven't received any payments.
+   *  Whether to include addresses that haven't received any payments.
    * @return array An array of arrays. The elements are:
-   * 	"account" => the label of the receiving address
-   * 	"amount" => total amount received by the address
-   * 	"confirmations" => number of confirmations of the most recent transaction included
+   *  "account" => the label of the receiving address
+   *  "amount" => total amount received by the address
+   *  "confirmations" => number of confirmations of the most recent transaction included
    * @throws LitecoinClientException
    * @since 0.3.17
    */
@@ -483,15 +702,15 @@ class LitecoinClient extends jsonrpc_client {
   }
 
   /**
-   * Return an array of arrays showing how many Litecoins have been received by
+   * Return an array of arrays showing how many Bitcoins have been received by
    * each label in the server's wallet.
    *
    * @param integer $minconf Minimum number of confirmations before payments are included.
    * @param boolean $includeempty Whether to include addresses that haven't received any payments.
    * @return array An array of arrays. The elements are:
-   * 	"label" => the label of the receiving address
-   * 	"amount" => total amount received by the address
-   * 	"confirmations" => number of confirmations of the most recent transaction included
+   *  "label" => the label of the receiving address
+   *  "amount" => total amount received by the address
+   *  "confirmations" => number of confirmations of the most recent transaction included
    * @throws LitecoinClientException
    * @deprecated Since 0.3.17
    */
@@ -543,9 +762,9 @@ class LitecoinClient extends jsonrpc_client {
    *
    * @param string $address String to test for validity as a Litecoin address
    * @return array An array containing:
-   * 	"isvalid" => true or false
-   * 	"ismine" => true if the address is in the server's wallet
-   * 	"address" => litecoinaddress
+   *  "isvalid" => true or false
+   *  "ismine" => true if the address is in the server's wallet
+   *  "address" => bitcoinaddress
    *  Note: ismine and address are only returned if the address is valid.
    * @throws LitecoinClientException
    */
@@ -576,17 +795,17 @@ class LitecoinClient extends jsonrpc_client {
   }
 
   /**
-   * Move litecoins between accounts.
+   * Move bitcoins between accounts.
    *
    * @param string $fromaccount
-   *    Account to move from. If given as an empty string ("") or NULL, litecoins will
+   *    Account to move from. If given as an empty string ("") or NULL, bitcoins will
    *    be moved from the wallet balance to the target account.
    * @param string $toaccount
    *     Account to move to
    * @param float $amount
    *     Amount to move
    * @param integer $minconf
-   *     Minimum number of confirmations on litecoins being moved
+   *     Minimum number of confirmations on bitcoins being moved
    * @param string $comment
    *     Transaction comment
    * @throws LitecoinClientException
@@ -607,7 +826,7 @@ class LitecoinClient extends jsonrpc_client {
 
   /**
    * Send $amount from $account's balance to $toaddress. This method will fail
-   * if there is less than $amount litecoins with $minconf confirmations in the
+   * if there is less than $amount bitcoins with $minconf confirmations in the
    * account's balance (unless $account is the empty-string-named default
    * account; it behaves like the sendtoaddress method). Returns transaction
    * ID on success.
@@ -615,7 +834,7 @@ class LitecoinClient extends jsonrpc_client {
    * @param string $account Account to send from
    * @param string $toaddress Litecoin address to send to
    * @param float $amount Amount to send
-   * @param integer $minconf Minimum number of confirmations on litecoins being sent
+   * @param integer $minconf Minimum number of confirmations on bitcoins being sent
    * @param string $comment
    * @param string $comment_to
    * @return string Hexadecimal transaction ID
@@ -715,7 +934,7 @@ class LitecoinClient extends jsonrpc_client {
    *    * @throws LitecoinClientException
    */
   public function listtransactions($account, $count = 10, $from = 0) {
-	if (!$account) $account = "";
+  if (!$account) $account = "";
 
     if (!is_numeric($count) || $count < 0)
       throw new LitecoinClientException('listtransactions requires a numeric count >= 0');
@@ -742,7 +961,8 @@ class LitecoinClient extends jsonrpc_client {
    * @return string Hexadecimal transaction ID on success.
    * @throws LitecoinClientException
    * @since 0.3.21
-      */
+   * @author codler<github>
+   */
   public function sendmany($fromAccount, $sendTo, $minconf = 1, $comment=NULL) {
     if (!$fromAccount || empty($fromAccount))
       throw new LitecoinClientException("sendmany requires an account");
