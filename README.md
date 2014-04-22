@@ -26,8 +26,8 @@ Credits
 -------
 
 litecoin-php based on nearly like for like:
-
-* [bitcoin-php][https://github.com/mikegogulski/bitcoin-php] by Mike Gogulski
+* [Mike Gogulski](http://github.com/mikegogulski/bitcoin-php) -
+  <http://github.com/mikegogulski/bitcoin-php/>
 
 
 litecoin-php incorporates code from:
