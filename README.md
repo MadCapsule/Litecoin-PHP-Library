@@ -25,6 +25,10 @@ Authors
 Credits
 -------
 
+litecoin-php based on nearly like for like:
+
+* [https://github.com/mikegogulski/bitcoin-php]:https://github.com/mikegogulski/bitcoin-php by Mike Gogulski
+
 litecoin-php incorporates code from:
 
 * [XML-RPC for PHP][XML-RPC-PHP] by Edd Dumbill (for JSON-RPC support)
