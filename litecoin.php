@@ -3,7 +3,7 @@
  * Litecoin classes
  *
  * By Mark Mikkelson - All rights reversed http://www.unlicense.org/ (public domain)
- * This is based largely on Mike Gogulski's Bitcoin library https://github.com/mikegogulski/bitcoin-php
+ * This is based largely on Mike Gogulski's Bitcoin library https://github.com/mikegogulski/litecoin-php
  * If you use this library and it helps you and would like to show your appreciation/support
  * You can donate Litecoins to address LPfr9bqMZ8j4Gu9HfT6cHdiiVxbvuonPdf   
  * They would be greatly appreciated. Thanks!
@@ -19,14 +19,14 @@
 /**
  * Litecoin utility functions class
  *
- * @author theymos (functionality)
  * @author Mark Mikkelson
  * 	http://www.madcapsule.com/ 
  *
  */
+
 class Litecoin {
   
-  /**
+/**
  * Exception class for LitecoinClient
  *
  * @author Mark Mikkelson
@@ -50,8 +50,7 @@ require_once(dirname(__FILE__) . "/includes/jsonrpc.inc");
 /**
  * Litecoin client class for JSON-RPC-HTTP[S] calls
  *
- * Implements the methods documented at https://www.bitcoin.org/wiki/doku.php?id=api
- *
+  *
  * @version 0.0.1
  * @author Mark Mikkelson
  * http://www.madcapsule.com 
@@ -59,7 +58,7 @@ require_once(dirname(__FILE__) . "/includes/jsonrpc.inc");
 class LitecoinClient extends jsonrpc_client {
 
   /**
-   * Create a jsonrpc_client object to talk to the bitcoin server and return it,
+   * Create a jsonrpc_client object to talk to the litecoin server and return it,
    * or false on failure.
    *
    * @param string $scheme
@@ -184,7 +183,8 @@ class LitecoinClient extends jsonrpc_client {
   }
 
   /*
-   * The following functions implement the Litecoin RPC API as documented at https://www.bitcoin.org/wiki/doku.php?id=api
+   * The following functions implement the Litecoin RPC API
+   * IMPORTANT: Not all functions are currently implemented
    */
 
   /**
@@ -261,7 +261,7 @@ class LitecoinClient extends jsonrpc_client {
   }
 
   /**
-   * Returns boolean true if server is trying to generate bitcoins, false otherwise.
+   * Returns boolean true if server is trying to generate litecoin, false otherwise.
    *
    * @return boolean Generation status
    * @throws LitecoinClientException
@@ -357,7 +357,7 @@ class LitecoinClient extends jsonrpc_client {
   }
 
   /**
-   * Returns a new bitcoin address for receiving payments.
+   * Returns a new litecoin address for receiving payments.
    *
    * If $account is specified (recommended), it is added to the address book so
    * payments received with the address will be credited to $account.
@@ -545,7 +545,7 @@ class LitecoinClient extends jsonrpc_client {
    * @return array An array containing:
    * 	"isvalid" => true or false
    * 	"ismine" => true if the address is in the server's wallet
-   * 	"address" => bitcoinaddress
+   * 	"address" => litecoinaddress
    *  Note: ismine and address are only returned if the address is valid.
    * @throws LitecoinClientException
    */
@@ -576,17 +576,17 @@ class LitecoinClient extends jsonrpc_client {
   }
 
   /**
-   * Move bitcoins between accounts.
+   * Move litecoins between accounts.
    *
    * @param string $fromaccount
-   *    Account to move from. If given as an empty string ("") or NULL, bitcoins will
+   *    Account to move from. If given as an empty string ("") or NULL, litecoins will
    *    be moved from the wallet balance to the target account.
    * @param string $toaccount
    *     Account to move to
    * @param float $amount
    *     Amount to move
    * @param integer $minconf
-   *     Minimum number of confirmations on bitcoins being moved
+   *     Minimum number of confirmations on litecoins being moved
    * @param string $comment
    *     Transaction comment
    * @throws LitecoinClientException
@@ -607,7 +607,7 @@ class LitecoinClient extends jsonrpc_client {
 
   /**
    * Send $amount from $account's balance to $toaddress. This method will fail
-   * if there is less than $amount bitcoins with $minconf confirmations in the
+   * if there is less than $amount litecoins with $minconf confirmations in the
    * account's balance (unless $account is the empty-string-named default
    * account; it behaves like the sendtoaddress method). Returns transaction
    * ID on success.
@@ -615,7 +615,7 @@ class LitecoinClient extends jsonrpc_client {
    * @param string $account Account to send from
    * @param string $toaddress Litecoin address to send to
    * @param float $amount Amount to send
-   * @param integer $minconf Minimum number of confirmations on bitcoins being sent
+   * @param integer $minconf Minimum number of confirmations on litecoins being sent
    * @param string $comment
    * @param string $comment_to
    * @return string Hexadecimal transaction ID
@@ -658,7 +658,7 @@ class LitecoinClient extends jsonrpc_client {
   }
 
   /**
-   * Return the current bitcoin address for receiving payments to $account.
+   * Return the current litecoin address for receiving payments to $account.
    * The account and address will be created if $account doesn't exist.
    *
    * @param string $account Account name
