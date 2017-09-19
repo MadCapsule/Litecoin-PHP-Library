@@ -7,7 +7,7 @@
         }
     ],
     "require": {
-        "Marduuk/Litecoin-PHP-Library": "master"
+        "Marduuk/Litecoin-PHP-Library": "dev-master"
     },
     "version": "1.0.0"
 }
