@@ -1,0 +1,12 @@
+{
+    "name": "marduuk/litecoin-php-library",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Marduuk/Litecoin-PHP-Library"
+        }
+    ],
+    "require": {
+        "Marduuk/Litecoin-PHP-Library": "master"
+    }
+}
