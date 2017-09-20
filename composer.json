@@ -1,0 +1,14 @@
+{
+    "name": "marduuk/litecoin-php-library",
+
+    "minimum-stability": "dev",
+    "require": {},
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Marduuk/Litecoin-PHP-Library"
+        }
+    ],
+
+    "license": "MIT"
+}
