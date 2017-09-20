@@ -1,7 +1,7 @@
 {
     "name": "marduuk/litecoin-php-library",
 
-    "minimum-stability": "1.0",
+    "minimum-stability": "dev",
     "require": {},
     "repositories": [
         {
