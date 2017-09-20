@@ -2,5 +2,11 @@
     "name": "marduuk/litecoin-php-library",
     "type": "library",
     "minimum-stability": "dev",
-    "require": {}
+    "require": {},
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Marduuk/Litecoin-PHP-Library"
+        }
+    ],
 }
